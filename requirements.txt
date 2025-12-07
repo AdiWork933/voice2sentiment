@@ -1,0 +1,10 @@
+# Core scientific computing and data handling
+numpy
+scikit-learn
+matplotlib
+
+# Audio processing
+librosa
+
+# Deep Learning framework
+tensorflow
