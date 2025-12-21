@@ -1,0 +1,32 @@
+# --- Web Framework & Server ---
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+python-multipart
+pydantic
+
+# --- Audio Processing ---
+librosa>=0.10.1
+pydub
+numpy>=1.26.0
+soundfile
+audioread
+
+# --- Google Gemini AI (GenAI) ---
+# Your code imports 'google.genai' (New SDK) AND 'google.generativeai' (Old SDK)
+google-genai
+google-generativeai
+
+# --- Machine Learning (TensorFlow) ---
+# Required for emotion and language detection models
+tensorflow
+
+# --- OpenAI Whisper & PyTorch ---
+openai-whisper
+# Standard CPU PyTorch (Installed by default). 
+# IF YOU NEED GPU SUPPORT: Comment out 'torch' below and run the command in the README.
+torch
+torchvision
+torchaudio
+
+# --- Utilities ---
+python-dotenv==1.0.0
