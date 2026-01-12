@@ -59,11 +59,15 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="AI Audio & Text Analysis API",
-    description="Unified API for Emotion Detection, Language ID, and Gemini Voice/Text Services.",
+    # NOTICE: The text below is pushed all the way to the left
+    description="""Unified API for Emotion Detection, Language ID, and Gemini Voice/Text Services.
+
+**Source Code:** [View on GitHub](https://github.com/AdiWork933/voice2sentiment)
+""",
     version="1.0.0",
-    docs_url=None,   # Disable default /docs
-    redoc_url=None,  # Disable default /redoc
-    openapi_url=None # Disable default /openapi.json
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
 )
 
 security = HTTPBasic()
@@ -434,4 +438,5 @@ async def refine_text(request: TextRequest):
     return {
         "model": TEXT_MODEL_NAME,
         "processed_text": response_text
+
     }
