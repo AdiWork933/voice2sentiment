@@ -165,3 +165,7 @@ ADMIN_PASSWORD = password
 ## architecture of DNN
 
 <img width="2816" height="1536" alt="Gemini_Generated_Image_sphjmtsphjmtsphj" src="https://github.com/user-attachments/assets/62a5ebde-cb17-4e5e-a50f-04a8c8f91e38" />
+
+## Fast API docs 
+
+<img width="1811" height="585" alt="image" src="https://github.com/user-attachments/assets/7617545a-6c2e-49d9-9535-380a04494337" />
