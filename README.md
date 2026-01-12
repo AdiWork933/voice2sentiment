@@ -53,7 +53,7 @@ The system is split into two distinct services:
 -   set Exicute Access(if window denied execution) : `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`
 -   Activate virtual environment : `.\venv\Scripts\Activate`
 -   Installing Required Librady : `pip install -r requirements.txt`
--   Run backend server : `uvicorn main_api:app --reload --port 8000`
+-   Run backend server : `uvicorn main_api:app --reload --port 8000` or directly run `./run.ps1`
 -   To stope streamlit Server : `ctrl + c (for Stop)`
 -   To Deactivate virtual environment : `deactivate ( into terminal)`
 
