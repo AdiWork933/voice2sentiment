@@ -1,8 +1,12 @@
 import os
 import numpy as np
 import librosa
-import tensorflow as tf
 from dotenv import load_dotenv
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Reduce TF logging clutter
+
+import tensorflow as tf
 
 # --- Load Environment Variables ---
 load_dotenv()
@@ -15,19 +19,13 @@ N_MFCC = 40  # Number of MFCC features
 
 # Emotion Model Mapping
 EMOTIONS = {
-    0: 'angry',
-    1: 'disgust',
-    2: 'fear',
-    3: 'happy',
-    4: 'neutral',
-    5: 'sad'
+    0: 'angry', 1: 'disgust', 2: 'fear', 
+    3: 'happy', 4: 'neutral', 5: 'sad'
 }
 
 # Language Model Mapping (Single Model)
 ID_TO_LANGUAGE = {
-    0: 'Hindi',
-    1: 'English',
-    2: 'Bengali'
+    0: 'Hindi', 1: 'English', 2: 'Bengali'
 }
 
 # --- Model Paths ---
@@ -39,30 +37,30 @@ emotion_model = None
 language_model = None
 
 def load_models():
-    """Loads the single-task Keras models specified in environment variables."""
+    """Loads the single-task Keras models."""
     global emotion_model, language_model
 
-    print("--- Loading Standard API Models ---")
+    print("--- 📂 Loading Standard API Models (CPU Optimized) ---")
 
     # Load Emotion Model
     if EMOTION_MODEL_PATH and os.path.exists(EMOTION_MODEL_PATH):
         try:
-            emotion_model = tf.keras.models.load_model(EMOTION_MODEL_PATH)
-            print(f"✅ Emotion model loaded: {EMOTION_MODEL_PATH}")
+            emotion_model = tf.keras.models.load_model(EMOTION_MODEL_PATH, compile=False)
+            print(f"✅ Emotion model loaded")
         except Exception as e:
             print(f"❌ Error loading emotion model: {e}")
     else:
-        print(f"⚠️ Emotion model path invalid: {EMOTION_MODEL_PATH}")
+        print(f"⚠️ Emotion model path invalid or missing")
 
     # Load Language Model
     if LANGUAGE_MODEL_PATH and os.path.exists(LANGUAGE_MODEL_PATH):
         try:
-            language_model = tf.keras.models.load_model(LANGUAGE_MODEL_PATH)
-            print(f"✅ Language model loaded: {LANGUAGE_MODEL_PATH}")
+            language_model = tf.keras.models.load_model(LANGUAGE_MODEL_PATH, compile=False)
+            print(f"✅ Language model loaded")
         except Exception as e:
             print(f"❌ Error loading language model: {e}")
     else:
-        print(f"⚠️ Language model path invalid: {LANGUAGE_MODEL_PATH}")
+        print(f"⚠️ Language model path invalid or missing")
 
     print("-" * 35)
 
@@ -78,9 +76,9 @@ def preprocess_audio(audio_source):
         if len(y) > SAMPLES_PER_TRACK:
             y = y[:SAMPLES_PER_TRACK]
         else:
-            padding = SAMPLES_PER_TRACK - len(y)
+            padding = int(SAMPLES_PER_TRACK - len(y))
             offset = padding // 2
-            y = np.pad(y, (offset, SAMPLES_PER_TRACK - len(y) - offset), 'constant')
+            y = np.pad(y, (offset, padding - offset), 'constant')
 
         # 3. Extract MFCCs
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=N_MFCC)
