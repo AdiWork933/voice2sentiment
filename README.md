@@ -49,9 +49,9 @@ The system is split into two distinct services:
 ### 🔧 Setup For Window OS
 
 -   Move Directory : `cd backend`
--   Creating virtual environment: `python -m venv venv`
+-   Creating virtual environment: `python -m venv .venv`
 -   set Exicute Access(if window denied execution) : `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`
--   Activate virtual environment : `.\venv\Scripts\Activate`
+-   Activate virtual environment : `.venv/Scripts/Activate`
 -   Installing Required Librady : `pip install -r requirements.txt`
 -   Run backend server : `uvicorn main_api:app --reload --port 8000` or directly run `./run.ps1`
 -   To stope streamlit Server : `ctrl + c (for Stop)`
@@ -76,9 +76,9 @@ Note : If your running both `Backend & Frontend` into same virtual environment n
 ### 🔧 Setup For Window OS
 
 -   Move Directory : `cd frontend`
--   Creating virtual environment(if needed): `python -m venv venv`
+-   Creating virtual environment(if needed): `python -m venv .venv`
 -   set Exicute Access(if window denied execution(if needed)) : `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`
--   Activate virtual environment(if needed) : `.\venv\Scripts\Activate`
+-   Activate virtual environment(if needed) : `.venv/Scripts/Activate`
 -   Installing Required Librady : `pip install -r requirements.txt`
 -   Run backend server : `python app.py`
 -   To stope streamlit Server : `ctrl + c (for Stop)`
