@@ -148,7 +148,7 @@ ADMIN_PASSWORD = password
 
 ## 📂 Project Structure
 
-## 📂 Project Structure
+
 
 ```text
 ├── backend/
