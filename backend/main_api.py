@@ -6,7 +6,6 @@ import secrets
 from typing import List
 
 # --- Third Party Imports ---
-import numpy as np
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
@@ -17,7 +16,8 @@ from google import genai
 from google.genai import types
 
 # --- Local Imports ---
-import api_config
+import api_config as api_config
+from emotion_model import EmotionPredictor
 from language_model import MultiLanguagePredictor
 
 # ======================================================================
@@ -40,7 +40,6 @@ API_KEYS = [
     if os.getenv(f"GEMINI_API_KEY_{i}")
 ]
 
-# Fallback: Check for single key if numbered keys fail
 if not API_KEYS and os.getenv("GEMINI_API_KEY"):
     API_KEYS.append(os.getenv("GEMINI_API_KEY"))
 
@@ -48,9 +47,9 @@ if not API_KEYS:
     logging.warning("⚠️ No Gemini API keys found in .env file.")
 
 MULTI_MODEL_PATHS = {
-    'hindi': os.getenv("HINDI_MODEL_PATH", "models/hindi_vs_nonhindi_detection_model.keras"),
-    'english': os.getenv("ENGLISH_MODEL_PATH", "models/english_vs_nonenglish_detection_model.keras"),
-    'bengali': os.getenv("BENGALI_MODEL_PATH", "models/bengali_vs_nonbengali_detection_model.keras")
+    'hindi': os.getenv("HINDI_MODEL_PATH"),
+    'english': os.getenv("ENGLISH_MODEL_PATH"),
+    'bengali': os.getenv("BENGALI_MODEL_PATH")
 }
 
 logging.basicConfig(level=logging.INFO)
@@ -61,11 +60,8 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="AI Audio & Text Analysis API",
-    # NOTICE: The text below is pushed all the way to the left
     description="""Unified API for Emotion Detection, Language ID, and Gemini Voice/Text Services.
-
-**Source Code:** [View on GitHub](https://github.com/AdiWork933/voice2sentiment)
-""",
+**Source Code:** [View on GitHub](https://github.com/AdiWork933/voice2sentiment)""",
     version="1.0.0",
     docs_url=None,
     redoc_url=None,
@@ -78,6 +74,7 @@ security = HTTPBasic()
 # ======================================================================
 
 multi_lang_predictor = None
+emotion_predictor = None
 
 class KeyManager:
     """Manages rotation of Gemini API keys."""
@@ -106,13 +103,13 @@ class TextRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    global multi_lang_predictor
+    global multi_lang_predictor, emotion_predictor
     
-    # Load Single Keras Models (CPU Optimized)
-    if hasattr(api_config, 'load_models'):
-        api_config.load_models()
+    # Load Emotion Model
+    emotion_path = os.getenv("EMOTION_MODEL_PATH")
+    emotion_predictor = EmotionPredictor(emotion_path)
         
-    # Load Multi-Language Models (Parallel)
+    # Load Multi-Language Models
     logging.info("Initializing Multi-Language Predictor...")
     try:
         multi_lang_predictor = MultiLanguagePredictor(MULTI_MODEL_PATHS)
@@ -152,14 +149,14 @@ def read_root():
         "status": "active",
         "docs_url": "/docs",
         "gpu_status": "Qwen Reserved (Audio using CPU)",
-        "Build by":"Aditya Choudhary"
+        "Build by": "Aditya Choudhary"
     }
 
 # --- Local Model Endpoints ---
 
 @app.post("/predict_emotion")
 async def predict_emotion(audio_file: UploadFile = File(...)):
-    if not api_config.emotion_model:
+    if emotion_predictor is None or emotion_predictor.model is None:
         raise HTTPException(status_code=503, detail="Emotion model not loaded.")
 
     audio_bytes = await audio_file.read()
@@ -168,15 +165,15 @@ async def predict_emotion(audio_file: UploadFile = File(...)):
     if not audio_buffer:
         raise HTTPException(status_code=400, detail="Invalid audio format.")
 
-    features = api_config.preprocess_audio(audio_buffer)
-    if features is None:
+    emotion, confidence, pred_time = emotion_predictor.predict(audio_buffer)
+    
+    if emotion is None:
         raise HTTPException(status_code=400, detail="Processing failed.")
 
-    pred = api_config.emotion_model.predict(features, verbose=0)[0]
-    idx = np.argmax(pred)
     return {
-        "emotion": api_config.EMOTIONS.get(idx, "Unknown"),
-        "confidence": f"{np.max(pred)*100:.2f}%"
+        "emotion": emotion,
+        "confidence": f"{confidence * 100:.2f}%",
+        "prediction_time": f"{pred_time} seconds"
     }
 
 @app.post("/M_predict_language")
@@ -190,8 +187,12 @@ async def predict_language_multi(audio_file: UploadFile = File(...)):
     if not audio_buffer:
         raise HTTPException(status_code=400, detail="Invalid audio.")
 
-    result = multi_lang_predictor.predict(audio_buffer)
-    return {"predicted_language": result}
+    result, pred_time = multi_lang_predictor.predict(audio_buffer)
+    
+    return {
+        "predicted_language": result,
+        "prediction_time": f"{pred_time} seconds"
+    }
 
 # --- Gemini Endpoints ---
 
