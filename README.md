@@ -148,19 +148,22 @@ ADMIN_PASSWORD = password
 
 ## 📂 Project Structure
 
+## 📂 Project Structure
+
 ```text
 ├── backend/
-│   ├──models/
-│   ├── main_api.py         # FastAPI Entry Point
-│   ├── api_config.py       # Model Loaders & Audio Preprocessing
-│   ├── language_model.py   # Multi-Model Language Logic
-│   └── requirements.txt
+│   ├── models/                     # Trained ML models (.keras / .h5)
+│   ├── api_config.py               # Audio preprocessing & shared configuration
+│   ├── emotion_model.py            # Emotion detection model loader & predictor
+│   ├── language_model.py           # Multi-language classification logic
+│   ├── main_api.py                 # FastAPI entry point & API routes
+│   └── requirements.txt            # Backend dependencies
+│
 └── frontend/
-    ├── app.py              # Flask Client Application
-    ├── templates/          # HTML Views (Login, Dashboard)
-    └── requirements.txt
-```
----
+    ├── app.py                      # Flask client application
+    ├── templates/                  # HTML templates (login, dashboard)
+    └── requirements.txt            # Frontend dependencies
+``` 
 
 ## architecture of DNN
 
