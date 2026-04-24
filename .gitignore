@@ -1,0 +1,14 @@
+# Virtual Environment
+.venv/
+
+# Environment Variables/Secrets
+.env
+
+# Python specific exclusions
+__pycache__/
+*.pyc
+demo/
+
+# Binary executables
+cloudflared-windows-amd64.exe
+DOCUMENTATION.txt

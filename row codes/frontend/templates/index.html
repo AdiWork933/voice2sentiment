@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Intelligence Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/mic-recorder-to-mp3@2.2.2/dist/index.min.js"></script>
+
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .loader { border-top-color: #4f46e5; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <header class="gradient-bg text-white shadow-xl py-4">
+        <div class="max-w-6xl mx-auto px-6 flex justify-between items-center">
+            <h1 class="text-2xl font-extrabold tracking-tight flex items-center">
+                <i class="fa-solid fa-chart-simple mr-3 text-cyan-200"></i>
+                Audio Analytics
+            </h1>
+            <a href="/logout" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-semibold transition">
+                <i class="fa-solid fa-sign-out-alt mr-2"></i> Logout
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 mt-8 pb-10">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl border border-white/40">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div id="drop-area" class="border-2 border-dashed border-gray-300 hover:border-indigo-500 bg-white/60 rounded-xl p-6 text-center cursor-pointer transition">
+                    <input type="file" id="file-input" accept=".wav,.mp3" class="hidden">
+                    <div class="text-indigo-500 text-4xl mb-2"><i class="fa-solid fa-cloud-upload-alt"></i></div>
+                    <h3 class="font-semibold text-lg">Upload File</h3>
+                    <p class="text-gray-500 text-xs mb-3">(.wav / .mp3)</p>
+                    <button onclick="document.getElementById('file-input').click()" class="bg-indigo-50 text-indigo-600 px-4 py-1 rounded-full text-xs font-bold uppercase hover:bg-indigo-100 transition">Browse</button>
+                    <div id="file-name" class="mt-2 text-sm text-green-600 font-bold hidden"></div>
+                </div>
+
+                <div class="rounded-xl bg-white/60 p-6 border border-gray-200 text-center">
+                    <div id="mic-icon" class="text-gray-400 text-4xl mb-2"><i class="fa-solid fa-microphone"></i></div>
+                    <h3 class="font-semibold text-lg">Record Voice</h3>
+                    <div class="flex gap-3 justify-center mt-4">
+                        <button id="record-btn" class="bg-red-500 text-white px-6 py-1 rounded-full text-sm font-bold shadow hover:bg-red-600 transition">REC</button>
+                        <button id="stop-btn" class="hidden bg-gray-800 text-white px-6 py-1 rounded-full text-sm font-bold shadow hover:bg-black transition">STOP</button>
+                    </div>
+                    <p id="timer" class="mt-2 text-sm font-mono text-red-600 hidden">00:00</p>
+                </div>
+            </div>
+
+            <div class="text-center mb-10 flex flex-wrap justify-center gap-4">
+                <button id="analyze-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-base px-6 py-3 rounded-full font-bold shadow-lg transform hover:scale-105 transition disabled:opacity-50">
+                    Full Analysis
+                </button>
+                <button id="transcribe-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white text-base px-6 py-3 rounded-full font-bold shadow-lg transform hover:scale-105 transition disabled:opacity-50">
+                    <i class="fa-solid fa-file-lines mr-2"></i> Transcribe Only
+                </button>
+                <button id="audio-only-btn" class="bg-pink-500 hover:bg-pink-600 text-white text-base px-6 py-3 rounded-full font-bold shadow-lg transform hover:scale-105 transition disabled:opacity-50">
+                    <i class="fa-solid fa-music mr-2"></i> Emotion & Lang
+                </button>
+            </div>
+
+            <div id="loader" class="hidden text-center py-10">
+                <div class="loader rounded-full border-4 border-gray-200 h-12 w-12 mx-auto mb-3"></div>
+                <p class="text-gray-600 animate-pulse">Processing...</p>
+            </div>
+
+            <div id="single-results" class="hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white border border-gray-100 rounded-xl shadow-lg p-6 text-center">
+                        <h3 class="text-gray-400 uppercase text-xs font-bold mb-2">Language</h3>
+                        <div id="lang-single" class="text-3xl font-bold text-indigo-700">--</div>
+                    </div>
+                    <div class="bg-white border border-gray-100 rounded-xl shadow-lg p-6 text-center">
+                        <h3 class="text-gray-400 uppercase text-xs font-bold mb-2">Emotion</h3>
+                        <div id="emo-single" class="text-3xl font-bold text-pink-600 mb-1">--</div>
+                        <div class="text-xs text-gray-400">Confidence: <span id="emo-conf">0%</span></div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                        <h3 class="text-gray-500 uppercase text-xs font-bold mb-3"><i class="fa-solid fa-closed-captioning mr-1"></i> Transcription</h3>
+                        <p id="trans-single" class="text-gray-800 italic leading-relaxed">...</p>
+                    </div>
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6">
+                        <h3 class="text-indigo-500 uppercase text-xs font-bold mb-3"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Refined Text</h3>
+                        <p id="refine-single" class="text-indigo-900 font-medium leading-relaxed">...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="report-results" class="hidden space-y-8">
+                
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                        <i class="fa-solid fa-wave-square mr-2 text-blue-500"></i> Emotion Timeline
+                    </h4>
+                    <div class="h-64 w-full">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                            <i class="fa-solid fa-language mr-2 text-indigo-500"></i> Language Distribution
+                        </h4>
+                        <div class="h-64 flex justify-center">
+                            <canvas id="langChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                        <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                            <i class="fa-solid fa-heart mr-2 text-pink-500"></i> Emotion Distribution
+                        </h4>
+                        <div class="h-64 flex justify-center">
+                            <canvas id="emoDistChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                    <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                        <i class="fa-solid fa-list-alt mr-2 text-green-500"></i> Transcript & Refinement Log
+                    </h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-600">
+                            <thead class="bg-gray-50 text-gray-700 border-b">
+                                <tr>
+                                    <th class="py-3 px-4">Timestamp</th>
+                                    <th class="py-3 px-4">Original Text</th>
+                                    <th class="py-3 px-4">Refined Text</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transcript-table-body" class="divide-y">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let audioBlob = null;
+        let recorder = new MicRecorder({ bitRate: 128 });
+        let timerInterval, startTime;
+        let charts = { timeline: null, lang: null, emoDist: null };
+
+        const els = {
+            fileInput: document.getElementById('file-input'),
+            fileName: document.getElementById('file-name'),
+            analyzeBtn: document.getElementById('analyze-btn'),
+            transcribeBtn: document.getElementById('transcribe-btn'),
+            audioOnlyBtn: document.getElementById('audio-only-btn'), // NEW Button
+            recordBtn: document.getElementById('record-btn'),
+            stopBtn: document.getElementById('stop-btn'),
+            timer: document.getElementById('timer'),
+            loader: document.getElementById('loader'),
+            singleResults: document.getElementById('single-results'),
+            reportResults: document.getElementById('report-results'),
+            transcriptTable: document.getElementById('transcript-table-body')
+        };
+
+        // --- Event Listeners ---
+        els.fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                audioBlob = e.target.files[0];
+                els.fileName.textContent = `Selected: ${audioBlob.name}`;
+                els.fileName.classList.remove('hidden');
+            }
+        });
+
+        els.recordBtn.addEventListener('click', () => {
+            recorder.start().then(() => {
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    els.timer.innerText = new Date(Date.now() - startTime).toISOString().substr(14, 5);
+                }, 1000);
+                els.recordBtn.classList.add('hidden');
+                els.stopBtn.classList.remove('hidden');
+                els.timer.classList.remove('hidden');
+            }).catch(e => alert("Mic access denied"));
+        });
+
+        els.stopBtn.addEventListener('click', () => {
+            recorder.stop().getMp3().then(([buffer, blob]) => {
+                audioBlob = new File(buffer, 'recording.mp3', { type: blob.type });
+                clearInterval(timerInterval);
+                els.fileName.textContent = "Recorded Audio Ready";
+                els.fileName.classList.remove('hidden');
+                els.stopBtn.classList.add('hidden');
+                els.recordBtn.classList.remove('hidden');
+                els.timer.classList.add('hidden');
+            });
+        });
+
+        // Toggle Buttons State
+        function setButtonsDisabled(state) {
+            els.analyzeBtn.disabled = state;
+            els.transcribeBtn.disabled = state;
+            els.audioOnlyBtn.disabled = state;
+        }
+
+        // Generic Function to Handle Requests
+        async function handleProcessing(url) {
+            if (!audioBlob) return alert("Please select or record audio first.");
+
+            els.singleResults.classList.add('hidden');
+            els.reportResults.classList.add('hidden');
+            els.loader.classList.remove('hidden');
+            setButtonsDisabled(true);
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, audioBlob.name);
+
+            try {
+                const res = await fetch(url, { method: 'POST', body: formData });
+                
+                if (res.redirected) {
+                    window.location.href = res.url;
+                    return;
+                }
+                const data = await res.json();
+                
+                els.loader.classList.add('hidden');
+                setButtonsDisabled(false);
+
+                if (data.error) throw new Error(data.error);
+
+                if (data.type === 'single') renderSingle(data);
+                else renderReport(data);
+
+            } catch (err) {
+                els.loader.classList.add('hidden');
+                setButtonsDisabled(false);
+                alert("Error: " + err.message);
+            }
+        }
+
+        // 1. FULL ANALYSIS
+        els.analyzeBtn.addEventListener('click', () => handleProcessing('/predict'));
+
+        // 2. TRANSCRIBE ONLY
+        els.transcribeBtn.addEventListener('click', () => handleProcessing('/transcribe_only'));
+
+        // 3. AUDIO (Emotion & Language) ONLY
+        els.audioOnlyBtn.addEventListener('click', () => handleProcessing('/audio_only'));
+
+
+        function renderSingle(data) {
+            els.singleResults.classList.remove('hidden');
+            document.getElementById('lang-single').innerText = data.language_data?.predicted_language || "Unknown";
+            document.getElementById('emo-single').innerText = data.emotion_data?.predicted_emotion || "Neutral";
+            document.getElementById('emo-conf').innerText = (data.emotion_data?.confidence_percent || "0") + "%";
+            
+            document.getElementById('trans-single').innerText = data.transcription_data?.transcription || "No text detected.";
+            document.getElementById('refine-single').innerText = data.refinement_data?.detail || "Refinement failed.";
+        }
+
+        function renderReport(data) {
+            els.reportResults.classList.remove('hidden');
+
+            if (charts.timeline) charts.timeline.destroy();
+            if (charts.lang) charts.lang.destroy();
+            if (charts.emoDist) charts.emoDist.destroy();
+
+            // 1. Timeline Chart
+            const emoMap = { 'happy': 4, 'neutral': 3, 'sad': 2, 'angry': 1, 'fear': 0, 'disgust': 0, 'surprise': 4 };
+            const numericData = data.timeline.emotions.map(e => emoMap[e.toLowerCase()] || 2);
+
+            charts.timeline = new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
+                data: {
+                    labels: data.timeline.labels,
+                    datasets: [{
+                        label: 'Emotion Trajectory',
+                        data: numericData,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: value => ({4:'Positive',3:'Neutral',2:'Sad',1:'Angry',0:'Fear'}[value] || '')
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 4
+                        }
+                    }
+                }
+            });
+
+            // 2. Lang Chart
+            charts.lang = new Chart(document.getElementById('langChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.stats.languages),
+                    datasets: [{
+                        data: Object.values(data.stats.languages),
+                        backgroundColor: ['#6366f1', '#818cf8', '#c7d2fe']
+                    }]
+                }
+            });
+
+            // 3. Emo Dist Chart
+            const emoColors = { 'happy': '#4ade80', 'neutral': '#9ca3af', 'sad': '#60a5fa', 'angry': '#f87171', 'fear': '#a855f7', 'disgust': '#16a34a' };
+            const emoKeys = Object.keys(data.stats.emotions);
+            charts.emoDist = new Chart(document.getElementById('emoDistChart'), {
+                type: 'pie',
+                data: {
+                    labels: emoKeys,
+                    datasets: [{
+                        data: Object.values(data.stats.emotions),
+                        backgroundColor: emoKeys.map(k => emoColors[k.toLowerCase()] || '#cbd5e1'),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } } }
+            });
+
+            // 4. Transcript Log Table
+            els.transcriptTable.innerHTML = "";
+            if(data.transcripts && data.transcripts.length > 0) {
+                data.transcripts.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 font-mono text-xs text-indigo-600">${row.timestamp}</td>
+                        <td class="py-3 px-4 italic text-gray-500">${row.text}</td>
+                        <td class="py-3 px-4 font-medium text-gray-800">${row.refined}</td>
+                    `;
+                    els.transcriptTable.appendChild(tr);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

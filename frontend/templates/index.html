@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice2Sentimental Dashboard</title>
+    <link rel="icon" href="icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/mic-recorder-to-mp3@2.2.2/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <header class="bg-white shadow-sm border-b border-gray-200 py-4">
+        <div class="max-w-6xl mx-auto px-6 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-indigo-600 flex items-center">
+                <i class="fa-solid fa-microphone-lines mr-3"></i> Voice2Sentimental
+            </h1>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500 font-medium">Welcome, {{ username }}</span>
+                <a href="/logout" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 mt-8 pb-10">
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="border-2 border-dashed border-gray-300 hover:border-indigo-400 bg-gray-50 rounded-xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center" onclick="document.getElementById('file-input').click()">
+                    <input type="file" id="file-input" accept=".wav,.mp3" multiple class="hidden">
+                    <div class="text-indigo-500 text-4xl mb-3"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h3 class="font-semibold text-lg text-gray-700">Upload Multiple Audio Files</h3>
+                    <p class="text-gray-400 text-sm mt-1">Accepts .wav or .mp3 formats</p>
+                    <div id="file-count" class="mt-4 text-sm text-indigo-600 font-bold hidden bg-indigo-50 py-2 px-4 rounded-full"></div>
+                </div>
+
+                <div class="rounded-xl bg-gray-50 border-2 border-transparent p-8 text-center flex flex-col justify-center items-center">
+                    <div id="mic-icon" class="text-gray-400 text-4xl mb-3"><i class="fa-solid fa-microphone"></i></div>
+                    <h3 class="font-semibold text-lg text-gray-700">Record Live Audio</h3>
+                    <div class="flex gap-3 mt-4">
+                        <button id="record-btn" class="bg-red-500 hover:bg-red-600 text-white px-8 py-2 rounded-full text-sm font-bold shadow transition flex items-center gap-2"><i class="fa-solid fa-circle"></i> Record</button>
+                        <button id="stop-btn" class="hidden bg-gray-800 hover:bg-black text-white px-8 py-2 rounded-full text-sm font-bold shadow transition flex items-center gap-2"><i class="fa-solid fa-stop"></i> Stop</button>
+                    </div>
+                    <p id="timer" class="mt-3 text-sm font-mono text-red-500 font-semibold hidden">00:00</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4 border-t border-gray-100 pt-8 mb-8">
+                <button onclick="processQueue('full')" id="analyze-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> Full Batch
+                </button>
+                <button onclick="processQueue('text')" id="transcribe-btn" class="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2">
+                    <i class="fa-solid fa-file-lines"></i> Transcribe
+                </button>
+                <button onclick="processQueue('audio')" id="audio-only-btn" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2">
+                    <i class="fa-solid fa-masks-theater"></i> Emotion & Lang
+                </button>
+                <button onclick="processQueue('emotion')" id="emotion-only-btn" class="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2">
+                    <i class="fa-solid fa-heart-pulse"></i> Emotion Only
+                </button>
+                <button onclick="processQueue('language')" id="language-only-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2">
+                    <i class="fa-solid fa-language"></i> Language Only
+                </button>
+                
+                <button onclick="clearQueue()" id="clear-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 rounded-lg font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-2 hidden">
+                    <i class="fa-solid fa-trash"></i> Clear Queue
+                </button>
+            </div>
+
+            <div id="dashboard-section" class="hidden mb-10 border-t border-gray-100 pt-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center"><i class="fa-solid fa-chart-pie mr-2 text-indigo-500"></i> Statistical Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col items-center">
+                        <h3 class="text-gray-600 font-semibold mb-4 text-sm uppercase tracking-wider">Emotion Distribution</h3>
+                        <div class="w-full max-w-[300px]"><canvas id="emotionChart"></canvas></div>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col items-center">
+                        <h3 class="text-gray-600 font-semibold mb-4 text-sm uppercase tracking-wider">Language Distribution</h3>
+                        <div class="w-full max-w-[300px]"><canvas id="languageChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="results-section" class="hidden overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
+                <table class="w-full text-left text-sm text-gray-600">
+                    <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
+                        <tr>
+                            <th class="py-4 px-6 font-semibold">File Name</th>
+                            <th class="py-4 px-6 font-semibold w-48">Language</th>
+                            <th class="py-4 px-6 font-semibold w-48">Emotion</th>
+                            <th class="py-4 px-6 font-semibold min-w-[300px]">Transcription Output</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody" class="divide-y divide-gray-100 bg-white">
+                        </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let audioFiles = [];
+        let recorder = new MicRecorder({ bitRate: 128 });
+        let timerInterval, startTime;
+
+        // Statistics Objects for Charts
+        let stats = { emotions: {}, languages: {} };
+        let emotionChartInstance = null;
+        let languageChartInstance = null;
+
+        const els = {
+            fileInput: document.getElementById('file-input'),
+            fileCount: document.getElementById('file-count'),
+            recordBtn: document.getElementById('record-btn'),
+            stopBtn: document.getElementById('stop-btn'),
+            timer: document.getElementById('timer'),
+            resultsSection: document.getElementById('results-section'),
+            resultsTbody: document.getElementById('results-tbody'),
+            dashboardSection: document.getElementById('dashboard-section'),
+            clearBtn: document.getElementById('clear-btn')
+        };
+
+        // --- Event Listeners ---
+        els.fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                audioFiles = Array.from(e.target.files);
+                updateFileCountUI();
+            }
+        });
+
+        els.recordBtn.addEventListener('click', () => {
+            recorder.start().then(() => {
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    els.timer.innerText = new Date(Date.now() - startTime).toISOString().substr(14, 5);
+                }, 1000);
+                els.recordBtn.classList.add('hidden');
+                els.stopBtn.classList.remove('hidden');
+                els.timer.classList.remove('hidden');
+            }).catch(e => alert("Microphone access denied"));
+        });
+
+        els.stopBtn.addEventListener('click', () => {
+            recorder.stop().getMp3().then(([buffer, blob]) => {
+                const recordedFile = new File(buffer, `recording_${audioFiles.length + 1}.mp3`, { type: blob.type });
+                audioFiles.push(recordedFile);
+                
+                clearInterval(timerInterval);
+                els.stopBtn.classList.add('hidden');
+                els.recordBtn.classList.remove('hidden');
+                els.timer.classList.add('hidden');
+                updateFileCountUI();
+            });
+        });
+
+        function updateFileCountUI() {
+            els.fileCount.innerHTML = `<i class="fa-solid fa-layer-group mr-2"></i> ${audioFiles.length} File(s) Ready in Queue`;
+            els.fileCount.classList.remove('hidden');
+            els.clearBtn.classList.remove('hidden');
+        }
+
+        function clearQueue() {
+            audioFiles = [];
+            els.fileInput.value = "";
+            els.fileCount.classList.add('hidden');
+            els.resultsSection.classList.add('hidden');
+            els.dashboardSection.classList.add('hidden');
+            els.clearBtn.classList.add('hidden');
+            stats = { emotions: {}, languages: {} };
+        }
+
+        function setButtonsDisabled(state) {
+            document.getElementById('analyze-btn').disabled = state;
+            document.getElementById('transcribe-btn').disabled = state;
+            document.getElementById('audio-only-btn').disabled = state;
+            document.getElementById('emotion-only-btn').disabled = state;
+            document.getElementById('language-only-btn').disabled = state;
+            els.clearBtn.disabled = state;
+            els.fileInput.disabled = state;
+            els.recordBtn.disabled = state;
+        }
+
+        // --- Charts Logic ---
+        function initCharts() {
+            const chartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
+            
+            if (emotionChartInstance) emotionChartInstance.destroy();
+            const ctxEmo = document.getElementById('emotionChart').getContext('2d');
+            emotionChartInstance = new Chart(ctxEmo, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'] }] },
+                options: chartOptions
+            });
+
+            if (languageChartInstance) languageChartInstance.destroy();
+            const ctxLang = document.getElementById('languageChart').getContext('2d');
+            languageChartInstance = new Chart(ctxLang, {
+                type: 'pie',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'] }] },
+                options: chartOptions
+            });
+        }
+
+        function updateChartsData(emotion, language) {
+            if(emotion && emotion !== "Error" && emotion !== "--" && emotion !== "Unknown") {
+                const cleanEmo = emotion.toLowerCase();
+                stats.emotions[cleanEmo] = (stats.emotions[cleanEmo] || 0) + 1;
+            }
+            if(language && language !== "Error" && language !== "--" && language !== "Unknown") {
+                stats.languages[language] = (stats.languages[language] || 0) + 1;
+            }
+
+            emotionChartInstance.data.labels = Object.keys(stats.emotions);
+            emotionChartInstance.data.datasets[0].data = Object.values(stats.emotions);
+            emotionChartInstance.update();
+
+            languageChartInstance.data.labels = Object.keys(stats.languages);
+            languageChartInstance.data.datasets[0].data = Object.values(stats.languages);
+            languageChartInstance.update();
+        }
+
+        // --- Batch Processing Logic ---
+        async function processQueue(actionType) {
+            if (audioFiles.length === 0) return alert("Please select or record files first.");
+            
+            setButtonsDisabled(true);
+            els.resultsSection.classList.remove('hidden');
+            els.dashboardSection.classList.remove('hidden');
+            
+            stats = { emotions: {}, languages: {} };
+            initCharts();
+            els.resultsTbody.innerHTML = '';
+
+            audioFiles.forEach((file, index) => {
+                const rowId = `row-${index}`;
+                let rowHtml = `<tr id="${rowId}" class="hover:bg-gray-50 transition">
+                    <td class="py-4 px-6 font-medium text-gray-800"><i class="fa-solid fa-file-audio text-indigo-400 mr-2"></i> ${file.name}</td>
+                    <td id="lang-${index}" class="py-4 px-6">--</td>
+                    <td id="emo-${index}" class="py-4 px-6">--</td>
+                    <td id="trans-${index}" class="py-4 px-6 text-gray-400 italic">Pending...</td>
+                </tr>`;
+                els.resultsTbody.innerHTML += rowHtml;
+            });
+
+            for (let i = 0; i < audioFiles.length; i++) {
+                await processSingleFile(audioFiles[i], i, actionType);
+            }
+
+            setButtonsDisabled(false);
+        }
+
+        async function processSingleFile(file, index, actionType) {
+            const formData = new FormData();
+            formData.append('audio', file, file.name);
+
+            const langCell = document.getElementById(`lang-${index}`);
+            const emoCell = document.getElementById(`emo-${index}`);
+            const transCell = document.getElementById(`trans-${index}`);
+
+            // Target Booleans
+            const isLang = ['full', 'language', 'audio'].includes(actionType);
+            const isEmo = ['full', 'emotion', 'audio'].includes(actionType);
+            const isText = ['full', 'text'].includes(actionType);
+
+            // Set UI Loading states based on requested action
+            if (isLang) {
+                langCell.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-indigo-400"></i>';
+            } else {
+                langCell.innerText = 'Skipped';
+            }
+
+            if (isEmo) {
+                emoCell.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-rose-400"></i>';
+            } else {
+                emoCell.innerText = 'Skipped';
+            }
+
+            if (isText) {
+                transCell.innerHTML = `<div class="flex items-center text-indigo-500 w-full">
+                    <i class="fa-solid fa-spinner fa-spin mr-2"></i> Transcribing...
+                    <div class="ml-3 flex-1 bg-gray-200 h-1.5 rounded-full overflow-hidden"><div class="bg-indigo-500 h-full w-full animate-pulse"></div></div>
+                </div>`;
+            } else {
+                transCell.innerText = 'Skipped.';
+            }
+
+            let finalEmo = "--", finalLang = "--";
+            let fetchPromises = [];
+
+            // Trigger Emotion/Language API
+            if (isLang || isEmo) {
+                fetchPromises.push(
+                    fetch('/audio_only', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.error) throw new Error(data.error);
+                        
+                        if (isLang) {
+                            finalLang = data.language_data?.['predicted language'] || data.language_data?.predicted_language || "Unknown";
+                            langCell.innerHTML = `<span class="font-bold text-indigo-600">${finalLang}</span>`;
+                        }
+                        
+                        if (isEmo) {
+                            finalEmo = data.emotion_data?.emotion || data.emotion_data?.predicted_emotion || "Unknown";
+                            const conf = data.emotion_data?.confidence || "";
+                            emoCell.innerHTML = `<span class="font-bold text-rose-500 capitalize">${finalEmo}</span> <span class="text-xs text-gray-400 ml-1">(${conf})</span>`;
+                        }
+                    }).catch(err => {
+                        console.error(err);
+                        if (isLang) langCell.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Error</span>`;
+                        if (isEmo) emoCell.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Error</span>`;
+                    })
+                );
+            }
+
+            // Trigger Transcription API
+            if (isText) {
+                fetchPromises.push(
+                    fetch('/transcribe_only', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.error) throw new Error(data.error);
+                        
+                        // If we are strictly running text transcription, we can still pull detected language
+                        if (actionType === 'text') {
+                           finalLang = data.transcription_data?.['detected language'] || "Unknown";
+                           langCell.innerHTML = `<span class="font-bold text-indigo-600">${finalLang}</span> <span class="text-xs text-gray-400">(via text)</span>`;
+                        }
+
+                        transCell.innerHTML = `<span class="text-gray-800 leading-relaxed">${data.transcription_data?.transcribed_text || "No transcription."}</span>`;
+                    }).catch(err => {
+                        console.error(err);
+                        transCell.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Error transcribing</span>`;
+                    })
+                );
+            }
+
+            await Promise.all(fetchPromises);
+
+            // Update graphs based on data retrieved
+            if (isLang && isEmo) {
+                updateChartsData(finalEmo, finalLang);
+            } else if (isEmo) {
+                updateChartsData(finalEmo, null);
+            } else if (isLang) {
+                updateChartsData(null, finalLang);
+            } else if (isText) {
+                updateChartsData(null, finalLang); // Text API often returns detected language
+            }
+        }
+    </script>
+</body>
+</html>

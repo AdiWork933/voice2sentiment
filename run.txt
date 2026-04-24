@@ -1,0 +1,6 @@
+PS D:\audio_api_backend> Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+PS D:\audio_api_backend> .venv/Scripts/activate
+(.venv) PS D:\audio_api_backend> 
+uvicorn main_api:app --reload
+
+.\cloudflared-windows-amd64.exe tunnel --url http://127.0.0.1:5000
