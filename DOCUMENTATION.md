@@ -122,7 +122,6 @@ Voice2Sentimental is a dual-service AI platform that processes audio files for f
 audio_api_backend/
 ├── README.md                     # Project overview
 ├── DOCUMENTATION.md              # This file
-├── DOCUMENTATION.txt             # Plain text documentation
 ├── requirements.txt              # Python dependencies
 ├── .env                          # Environment variables
 ├── .gitignore                    # Git exclusions
@@ -154,16 +153,6 @@ audio_api_backend/
 │       ├── login.html
 │       ├── register.html
 │       └── index.html
-│
-└── row codes/                    # Training & reference
-    ├── model.py                 # Qwen LLM reference
-    ├── audio_text.py
-    ├── hindi_train.py           # Hindi model training
-    ├── english_train.py         # English model training
-    ├── bengali_train.py         # Bengali model training
-    ├── backend/                 # Alternative implementations
-    ├── frontend/
-    └── UI/
 ```
 
 ---
