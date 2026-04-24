@@ -175,13 +175,6 @@ audio_api_backend/
 │   ├── templates/             # HTML templates (login, index, register)
 │   └── users.json             # User credentials storage
 │
-├── row codes/                 # Training scripts & reference implementations
-│   ├── backend/               # Alternative API implementations
-│   ├── hindi_train.py         # Hindi model training
-│   ├── english_train.py       # English model training
-│   ├── bengali_train.py       # Bengali model training
-│   └── model.py               # Qwen LLM integration reference
-│
 ├── requirements.txt           # Dependencies
 ├── run.ps1                    # One-click launcher (Windows)
 └── .env                       # Environment variables (not in git)
